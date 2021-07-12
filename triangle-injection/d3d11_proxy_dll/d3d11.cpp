@@ -28,8 +28,6 @@ typedef HRESULT(__stdcall* fn_D3D11CreateDeviceAndSwapChain)(
 
 typedef HRESULT(__stdcall* fn_DXGISwapChain_Present)(IDXGISwapChain*, UINT, UINT);
 
-
-thread_local bool called_from_dxgi = false;
 IDXGISwapChain* swapChain = nullptr;
 ID3D11Device5* device = nullptr;
 ID3D11DeviceContext4* devCon = nullptr;
@@ -44,7 +42,6 @@ ID3D11DepthStencilState* SolidDepthStencilState = nullptr;
 
 HRESULT DXGISwapChain_Present_Hook(IDXGISwapChain* thisPtr, UINT SyncInterval, UINT Flags)
 {
-
 	devCon->VSSetShader(vs, 0, 0);
 	devCon->PSSetShader(ps, 0, 0);
 	devCon->IASetInputLayout(vertLayout);
@@ -58,12 +55,10 @@ HRESULT DXGISwapChain_Present_Hook(IDXGISwapChain* thisPtr, UINT SyncInterval, U
 	devCon->Draw(3, 0);
 
 
-	fn_DXGISwapChain_Present D3D11DeviceContext_ClearRenderTargetView_Orig;
-	PopAddress(uint64_t(&D3D11DeviceContext_ClearRenderTargetView_Orig));
+	fn_DXGISwapChain_Present DXGISwapChain_Present_Orig;
+	PopAddress(uint64_t(&DXGISwapChain_Present_Orig));
 
-	called_from_dxgi = true;
-	HRESULT r = D3D11DeviceContext_ClearRenderTargetView_Orig(thisPtr, SyncInterval, Flags);
-	called_from_dxgi = false;
+	HRESULT r = DXGISwapChain_Present_Orig(thisPtr, SyncInterval, Flags);
 	return r;
 }
 
@@ -194,6 +189,10 @@ fn_D3D11CreateDeviceAndSwapChain LoadD3D11AndGetOriginalFuncPointer()
 	return (fn_D3D11CreateDeviceAndSwapChain)GetProcAddress(d3d_dll, TEXT("D3D11CreateDeviceAndSwapChain"));
 }
 
+inline void** get_vtable_ptr(void* obj)
+{
+	return *reinterpret_cast<void***>(obj);
+}
 
 extern "C" HRESULT __stdcall D3D11CreateDeviceAndSwapChain(
 	IDXGIAdapter * pAdapter,
@@ -209,17 +208,12 @@ extern "C" HRESULT __stdcall D3D11CreateDeviceAndSwapChain(
 	D3D_FEATURE_LEVEL * pFeatureLevel,
 	ID3D11DeviceContext * *ppImmediateContext
 )
-{	 
+{
+	MessageBox(NULL, TEXT("Calling D3D11CreateDeviceAndSwapChain"), TEXT("Ok"), 0);
+
 	fn_D3D11CreateDeviceAndSwapChain D3D11CreateDeviceAndSwapChain_Orig = LoadD3D11AndGetOriginalFuncPointer();
 
 	HRESULT res = D3D11CreateDeviceAndSwapChain_Orig(pAdapter, DriverType, Software, Flags, pFeatureLevels, FeatureLevels, SDKVersion, pSwapChainDesc, ppSwapChain, ppDevice, pFeatureLevel, ppImmediateContext);
-	if (called_from_dxgi)
-	{
-		return res;
-	}
-
-	if (ppImmediateContext == nullptr) return res;
-	if (!ppDevice || !ppSwapChain) return res;
 
 	HRESULT hr = (*ppDevice)->QueryInterface(__uuidof(ID3D11Device5), (void**)&device);
 	hr = (*ppImmediateContext)->QueryInterface(__uuidof(ID3D11DeviceContext), (void**)&devCon);
@@ -231,7 +225,7 @@ extern "C" HRESULT __stdcall D3D11CreateDeviceAndSwapChain(
 
 	swapChain = *ppSwapChain;
 	void** swapChainVTable = get_vtable_ptr(swapChain);
-
+	
 	InstallHook(swapChainVTable[8], DXGISwapChain_Present_Hook);
 	//present is [8];
 
