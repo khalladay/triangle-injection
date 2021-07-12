@@ -209,7 +209,9 @@ extern "C" HRESULT __stdcall D3D11CreateDeviceAndSwapChain(
 	ID3D11DeviceContext * *ppImmediateContext
 )
 {
-	MessageBox(NULL, TEXT("Calling D3D11CreateDeviceAndSwapChain"), TEXT("Ok"), 0);
+	//uncomment if you need to debug an issue in a project you aren't launching from VS
+	//this gives you an easy way to make sure you can attach a debugger at the right time
+	//MessageBox(NULL, TEXT("Calling D3D11CreateDeviceAndSwapChain"), TEXT("Ok"), 0);
 
 	fn_D3D11CreateDeviceAndSwapChain D3D11CreateDeviceAndSwapChain_Orig = LoadD3D11AndGetOriginalFuncPointer();
 
@@ -230,4 +232,14 @@ extern "C" HRESULT __stdcall D3D11CreateDeviceAndSwapChain(
 	//present is [8];
 
 	return res;
+}
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD ul_reason_for_call, LPVOID lpvReserved)
+{
+	if (ul_reason_for_call == DLL_PROCESS_ATTACH)
+	{
+		MessageBox(NULL, TEXT("Target app has loaded your proxy d3d11.dll and called DllMain. If you're launching Skyrim via steam, you need to dismiss this popup quickly, otherwise you get a load error"), TEXT("Success"), 0);
+	}
+
+	return true;
 }

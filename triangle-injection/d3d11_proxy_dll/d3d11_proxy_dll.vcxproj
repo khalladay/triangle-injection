@@ -137,11 +137,12 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>capstone.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>$(SolutionDir)$(ProjectName)\res\d3d11_exports.def</ModuleDefinitionFile>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
     <PostBuildEvent>
       <Command>SET ERRORLEVEL=0
 rmdir /s /q $(OutDir)..\hook_content
-rm $(OutDir)..\$(TargetName).dll
+del $(OutDir)..\$(TargetName).dll
 robocopy  $(SolutionDir)d3d11_proxy_dll\hook_content $(OutDir)..\hook_content
 robocopy $(OutDir) $(OutDir)..\
 copy $(OutDir)$(TargetName).dll  $(OutDir)..\$(TargetName).dll
@@ -171,7 +172,7 @@ rmdir /s /q $(OutDir)</Command>
     <PostBuildEvent>
       <Command>SET ERRORLEVEL=0
 rmdir /s /q $(OutDir)..\hook_content
-rm $(OutDir)..\$(TargetName).dll
+del $(OutDir)..\$(TargetName).dll
 robocopy  $(SolutionDir)d3d11_proxy_dll\hook_content $(OutDir)..\hook_content
 copy $(OutDir)$(TargetName).dll  $(OutDir)..\$(TargetName).dll
 rmdir /s /q $(OutDir)</Command>
@@ -179,7 +180,6 @@ rmdir /s /q $(OutDir)</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="d3d11.cpp" />
-    <ClCompile Include="dll_main.cpp" />
     <ClCompile Include="hooking.cpp" />
   </ItemGroup>
   <ItemGroup>
